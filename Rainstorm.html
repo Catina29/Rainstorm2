@@ -3,30 +3,40 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>任务压力管理 V2</title>
+<title>Rainstorm V3</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
-body{font-family:sans-serif;margin:0;padding:15px;transition:.5s;background:#f5f5f5;color:#222}
-.task-card{background:#fff;padding:12px;border-radius:12px;margin:10px 0;position:relative;transition:.5s;overflow:hidden}
-input,textarea,button,select{width:100%;padding:8px;margin:4px 0;box-sizing:border-box}
+body{font-family:sans-serif;margin:0;padding:15px;background:#f0f2f5;color:#222;transition:.5s}
+h2,h3{margin:6px 0}
+.card{background:#fff;padding:12px;border-radius:12px;margin:10px 0;box-shadow:0 2px 8px rgba(0,0,0,0.1)}
+input,textarea,button,select{width:100%;padding:8px;margin:4px 0;box-sizing:border-box;border-radius:6px;border:1px solid #ccc}
+textarea{resize:vertical}
 .progress{height:16px;background:#ddd;border-radius:20px;overflow:hidden;margin:4px 0}
 .bar{height:100%;background:#4caf50;transition:.3s;width:0}
-.stress-layer{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;transition:.5s;z-index:2;}
-body.stress0{background:#f5f5f5}
-body.stress1{background:#fff2f2}
-body.stress2{background:#ffd6d6}
-body.stress3{background:#ffb3b3}
-body.stress4{background:#ff8c8c}
-body.stress5{background:#ff5e5e;color:#fff}
-.warn{font-weight:bold;color:#b00020;transition:.5s}
+.warn{font-weight:bold;transition:.5s}
+.stress0{background:#f0f2f5}
+.stress1{background:#fff2f2}
+.stress2{background:#ffd6d6}
+.stress3{background:#ffb3b3}
+.stress4{background:#ff8c8c}
+.stress5{background:#ff5e5e;color:#fff}
 body.stress5 .warn{color:#fff700}
-.card{background:#fff;padding:12px;border-radius:12px;margin:10px 0}
+.task-card{border-left:5px solid #4caf50;padding-left:10px;position:relative;transition:.5s;margin-bottom:8px;overflow:hidden}
+.task-card .stress-layer{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:1}
+pre{white-space:pre-wrap;background:#f9f9f9;padding:10px;border-radius:8px;overflow:auto}
 </style>
 </head>
 <body>
-<h2>任务压力管理 V2</h2>
+<h2>Rainstorm V3 - 高级任务管理</h2>
 
-<div id="pressureBox" class="card"></div>
+<div class="card">
+<h3>模板快速导入任务</h3>
+<pre>任务名,开始时间,结束时间
+拍面试视频,2026-06-10T14:00,2026-06-11T14:00
+英语作文,2026-06-12T08:00,2026-06-13T22:30</pre>
+<textarea id="templateText" rows="6" placeholder="按上方CSV格式粘贴任务"></textarea>
+<button onclick="importTasks()">导入任务</button>
+</div>
 
 <div class="card">
 <h3>新增任务</h3>
@@ -38,10 +48,13 @@ body.stress5 .warn{color:#fff700}
 <button onclick="addTask()">添加任务</button>
 </div>
 
+<div class="card">
+<h3>任务列表</h3>
 <div id="tasks"></div>
+</div>
 
 <div class="card">
-<h3>今日自动小结</h3>
+<h3>今日小结</h3>
 <div id="summary"></div>
 </div>
 
@@ -64,67 +77,52 @@ body.stress5 .warn{color:#fff700}
 </div>
 
 <script>
-let tasks=JSON.parse(localStorage.getItem("tasks")||"[]");
-let logs=JSON.parse(localStorage.getItem("logs")||"[]");
-let memos=JSON.parse(localStorage.getItem("memos")||"[]");
+let tasks=JSON.parse(localStorage.getItem("tasks_v3")||"[]");
+let logs=JSON.parse(localStorage.getItem("logs_v3")||"[]");
+let memos=JSON.parse(localStorage.getItem("memos_v3")||"[]");
 
-function save(){
- localStorage.setItem("tasks",JSON.stringify(tasks));
- localStorage.setItem("logs",JSON.stringify(logs));
- localStorage.setItem("memos",JSON.stringify(memos));
+function save(){localStorage.setItem("tasks_v3",JSON.stringify(tasks));
+localStorage.setItem("logs_v3",JSON.stringify(logs));
+localStorage.setItem("memos_v3",JSON.stringify(memos));}
+
+// 导入模板任务 CSV
+function importTasks(){
+ let txt=document.getElementById("templateText").value.trim();
+ if(!txt) return;
+ let lines=txt.split(/\n/).slice(1);
+ lines.forEach(line=>{
+   let [title,start,end]=line.split(",");
+   if(title) tasks.push({id:Date.now()+Math.random(),title:title.trim(),start:start.trim(),end:end.trim(),progress:0,reports:[]});
+ });
+ save(); render(); alert("任务已导入");
 }
 
+// 新增任务
 function addTask(){
- const t={
- id:Date.now(),
- title:title.value,
- start:start.value,
- end:end.value,
- progress:0,
- reports:[]
- };
- if(!t.title)return;
- tasks.push(t);
- save();
- render();
+ const t={id:Date.now(),title:title.value,start:start.value,end:end.value,progress:0,reports:[]};
+ if(!t.title) return;
+ tasks.push(t); save(); render();
 }
 
+// 汇报任务
 function reportTask(id){
  let txt=document.getElementById("txt"+id).value;
  let add=Number(document.getElementById("add"+id).value||0);
  let file=document.getElementById("file"+id).files[0];
-
  const finish=(img)=>{
    let task=tasks.find(x=>x.id===id);
    task.progress=Math.min(100,task.progress+add);
-   task.reports.push({
-     date:new Date().toLocaleString(),
-     text:txt,
-     image:img,
-     add:add
-   });
-
+   task.reports.push({date:new Date().toLocaleString(),text:txt,image:img,add:add});
    if(task.progress>=100){
-      logs.push({
-        date:new Date().toLocaleString(),
-        title:task.title,
-        result:"任务完成",
-        reports:task.reports
-      });
-      tasks=tasks.filter(x=>x.id!==id);
+     logs.push({date:new Date().toLocaleString(),title:task.title,result:"任务完成",reports:task.reports});
+     tasks=tasks.filter(x=>x.id!==id);
    }
-
-   save();
-   render();
+   save(); render();
  };
-
- if(file){
-   let reader=new FileReader();
-   reader.onload=e=>finish(e.target.result);
-   reader.readAsDataURL(file);
- }else finish("");
+ if(file){let reader=new FileReader();reader.onload=e=>finish(e.target.result);reader.readAsDataURL(file);} else finish("");
 }
 
+// 修改任务时间
 function editTask(id){
  let t=tasks.find(x=>x.id===id);
  t.start=prompt("修改开始时间",t.start)||t.start;
@@ -132,14 +130,13 @@ function editTask(id){
  save(); render();
 }
 
+// 压力值计算
 function getStress(){
- let stress=0;
- const today=new Date();
+ let stress=0; const today=new Date();
  tasks.forEach(t=>{
-   if(!t.start || !t.end) return;
-   let start=new Date(t.start);
-   let end=new Date(t.end);
-   if(today<start) return; // 未开始不计压力
+   if(!t.start||!t.end) return;
+   let start=new Date(t.start),end=new Date(t.end);
+   if(today<start) return;
    let progressFactor=100-t.progress;
    let timeFactor=Math.max(0,1-(end-today)/(end-start));
    let taskStress=Math.min(100,progressFactor*timeFactor*0.5);
@@ -150,30 +147,18 @@ function getStress(){
  return Math.min(100,stress);
 }
 
+// 渲染页面
 function render(){
  let stress=getStress();
  document.body.className="stress"+Math.min(5,Math.floor(stress/20)+1);
-
- pressureBox.innerHTML=`
- <h3>今日压力值：${Math.round(stress)}/100</h3>
- <div class="warn">
- ${stress<20?"状态正常":
- stress<40?"有任务滞后":
- stress<60?"进度不足，需要汇报":
- stress<80?"拖延明显，请立即处理任务":
- "高压状态：多个任务未推进或未汇报"}
- </div>`;
+ pressureBox.innerHTML=`<h3>今日压力值：${Math.round(stress)}/100</h3>
+ <div class="warn">${stress<20?"状态正常":stress<40?"有任务滞后":stress<60?"进度不足，需要汇报":stress<80?"拖延明显，请立即处理任务":"高压状态：多个任务未推进或未汇报"}</div>`;
 
  let tasksDiv="";
  tasks.forEach(t=>{
- tasksDiv+=`
- <div class="task-card">
- <h3>${t.title}</h3>
- <div>开始：${t.start||"-"}</div>
- <div>结束：${t.end||"-"}</div>
+ tasksDiv+=`<div class="task-card">
+ <b>${t.title}</b><br>开始：${t.start||"-"}<br>结束：${t.end||"-"}<br>
  <div class="progress"><div class="bar" style="width:${t.progress}%"></div></div>
- <div>${t.progress}/100</div>
-
  <input id="add${t.id}" type="number" placeholder="本次增加格数">
  <textarea id="txt${t.id}" placeholder="成果汇报"></textarea>
  <input id="file${t.id}" type="file" accept="image/*">
@@ -184,50 +169,37 @@ function render(){
  document.getElementById("tasks").innerHTML=tasksDiv;
 
  let completed=logs.filter(x=>x.result==="任务完成").length;
- summary.innerHTML=`日期：${new Date().toLocaleDateString()}<br>
- 当前任务数：${tasks.length}<br>
- 已完成任务：${completed}<br>
- 今日压力值：${Math.round(stress)}`;
+ summary.innerHTML=`日期：${new Date().toLocaleDateString()}<br>当前任务数：${tasks.length}<br>已完成任务：${completed}<br>今日压力值：${Math.round(stress)}`;
 
- renderLogs();
- drawChart();
- renderMemos();
+ renderLogs(); drawChart(); renderMemos();
 }
 
+// 日志搜索
 function renderLogs(){
  let kw=document.getElementById("searchLog").value.toLowerCase();
  document.getElementById("logs").innerHTML=logs.filter(l=>l.title.toLowerCase().includes(kw)||l.reports.some(r=>r.text.toLowerCase().includes(kw))).map(
- l=>`<div>
- <strong>${l.date} - ${l.title} - ${l.result}</strong>
- ${l.reports.map(r=>`<div>${r.date}: ${r.text}${r.image?'<br><img src="'+r.image+'" width="100">':''}</div>`).join('')}
- </div>`
+ l=>`<div><strong>${l.date} - ${l.title} - ${l.result}</strong>${l.reports.map(r=>`<div>${r.date}: ${r.text}${r.image?'<br><img src="'+r.image+'" width="100">':''}</div>`).join('')}</div>`
  ).join("");
 }
 
+// 绘制图表
 function drawChart(){
  let ctx=document.getElementById("chart");
  let data=tasks.map(t=>t.progress);
  let labels=tasks.map(t=>t.title);
- if(window.myChart)window.myChart.destroy();
- window.myChart=new Chart(ctx,{
- type:'bar',
- data:{labels:labels,datasets:[{data:data,label:"完成度",backgroundColor:"#4caf50"}]},
- options:{responsive:true,scales:{y:{beginAtZero:true,max:100}}}
- });
+ if(window.myChart) window.myChart.destroy();
+ window.myChart=new Chart(ctx,{type:'bar',data:{labels:labels,datasets:[{data:data,label:"完成度",backgroundColor:"#4caf50"}]},options:{responsive:true,scales:{y:{beginAtZero:true,max:100}}}});
 }
 
+// 备忘录
 function addMemo(){
  let txt=document.getElementById("memoInput").value;
  if(!txt) return;
  memos.push({id:Date.now(),text:txt,date:new Date().toLocaleString()});
  document.getElementById("memoInput").value="";
- save();
- renderMemos();
+ save(); renderMemos();
 }
-
-function renderMemos(){
- document.getElementById("memos").innerHTML=memos.map(m=>`<div>${m.date}: ${m.text}</div>`).join("");
-}
+function renderMemos(){document.getElementById("memos").innerHTML=memos.map(m=>`<div>${m.date}: ${m.text}</div>`).join("");}
 
 render();
 </script>
