@@ -1919,5 +1919,81 @@ function openSummaryIfNeeded(){
 }
 init();
 </script>
+
+<script>
+function calculateTaskPressure(task){
+    const now = new Date();
+    const start = new Date(task.start);
+    const end = new Date(task.end);
+    const progressRatio = task.progress/100;
+    let pressure = 0;
+
+    // 进度落后
+    pressure += (1 - progressRatio) * 40;
+
+    // 临近截止时间
+    const totalDays = (end - start)/(1000*3600*24);
+    const elapsed = (now - start)/(1000*3600*24);
+    const remainDays = totalDays - elapsed;
+    if(remainDays <= 0) pressure += 40;
+    else pressure += Math.max(0, (1 - remainDays/totalDays) * 30);
+
+    // 当天是否汇报
+    if(!task.reportedToday) pressure += 20;
+
+    // 长期未汇报
+    if(task.daysSinceLastReport >= 2) pressure += 10;
+
+    return Math.min(100, Math.floor(pressure));
+}
+
+function updateTaskVisuals(){
+    let totalPressure = 0;
+    tasks.forEach(task => {
+        if(task.completed) return;
+        task.pressure = calculateTaskPressure(task);
+
+        // 单个任务卡颜色渐变
+        const taskDiv = document.getElementById('task-' + task.id);
+        if(taskDiv){
+            if(task.pressure <= 20) taskDiv.style.background = '#ffffff';
+            else if(task.pressure <= 40) taskDiv.style.background = '#ffe6e6';
+            else if(task.pressure <= 60) taskDiv.style.background = '#ffcccc';
+            else if(task.pressure <= 80) taskDiv.style.background = '#ff9999';
+            else taskDiv.style.background = '#ff4d4d';
+            // 高压力闪烁
+            if(task.pressure > 80){
+                taskDiv.style.animation = 'shake 0.5s infinite';
+            } else {
+                taskDiv.style.animation = '';
+            }
+        }
+        totalPressure += task.pressure;
+    });
+    // 页面总体压力颜色
+    const avgPressure = totalPressure / tasks.length || 0;
+    if(avgPressure <= 20) document.body.style.background = '#ffffff';
+    else if(avgPressure <= 40) document.body.style.background = '#fff0f0';
+    else if(avgPressure <= 60) document.body.style.background = '#ffe0e0';
+    else if(avgPressure <= 80) document.body.style.background = '#ffcccc';
+    else document.body.style.background = '#ff4d4d';
+}
+
+setInterval(updateTaskVisuals, 1000);
+
+// 简单震动动画
+const style = document.createElement('style');
+style.innerHTML = `
+@keyframes shake {
+  0% { transform: translate(1px, 0px); }
+  25% { transform: translate(-1px, 0px); }
+  50% { transform: translate(1px, 0px); }
+  75% { transform: translate(-1px, 0px); }
+  100% { transform: translate(0px, 0px); }
+}
+`;
+document.head.appendChild(style);
+</script>
+
 </body>
 </html>
