@@ -1,0 +1,1923 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Rainstorm Pro</title>
+<style>
+:root{
+  --bg0:#07111f;
+  --bg1:#0d1728;
+  --card:#111c2f;
+  --card2:#16243a;
+  --line:#27415f;
+  --text:#e7eef8;
+  --muted:#95a6bf;
+  --accent:#6d7cff;
+  --accent2:#53d7d3;
+  --good:#31c48d;
+  --warn:#f8b84e;
+  --danger:#ff5f6d;
+  --danger2:#bf1f3a;
+  --shadow:0 16px 40px rgba(0,0,0,.35);
+  --radius:22px;
+  --pagePressure:0;
+  --pageRed:0;
+}
+
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  min-height:100vh;
+  color:var(--text);
+  background:
+    radial-gradient(circle at 20% 0%, rgba(109,124,255,.18), transparent 30%),
+    radial-gradient(circle at 80% 0%, rgba(83,215,211,.10), transparent 25%),
+    linear-gradient(180deg, var(--bg0), var(--bg1) 45%, #050a14);
+  overflow-x:hidden;
+  transition: background .5s ease, filter .5s ease;
+}
+body::before{
+  content:"";
+  position:fixed; inset:0;
+  pointer-events:none;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,.03), transparent 40%),
+    radial-gradient(circle at center, rgba(255,0,0,.08), transparent 60%);
+  opacity:calc(var(--pagePressure) / 100 * .85);
+  mix-blend-mode:screen;
+  z-index:0;
+  transition:opacity .45s ease;
+}
+body.pressure-low{filter:saturate(1.02)}
+body.pressure-mid{filter:saturate(1.05) contrast(1.02)}
+body.pressure-high{filter:saturate(1.08) contrast(1.05)}
+body.pressure-critical{
+  animation:bodyShake .25s infinite;
+}
+@keyframes bodyShake{
+  0%,100%{transform:translate(0,0)}
+  25%{transform:translate(-1px,1px)}
+  50%{transform:translate(1px,-1px)}
+  75%{transform:translate(1px,1px)}
+}
+
+.app{
+  position:relative;
+  z-index:1;
+  max-width:980px;
+  margin:0 auto;
+  padding:16px 14px 96px;
+}
+.header{
+  position:sticky;
+  top:0;
+  z-index:20;
+  backdrop-filter:blur(14px);
+  background:linear-gradient(180deg, rgba(7,17,31,.92), rgba(7,17,31,.74));
+  border-bottom:1px solid rgba(255,255,255,.05);
+  padding:14px 0 12px;
+  margin-bottom:12px;
+}
+.topbar{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+}
+.brand{
+  min-width:0;
+}
+.brand h1{
+  margin:0;
+  font-size:22px;
+  line-height:1.15;
+  letter-spacing:.2px;
+}
+.brand p{
+  margin:6px 0 0;
+  font-size:12px;
+  color:var(--muted);
+}
+
+.gauge{
+  min-width:124px;
+  border:1px solid rgba(255,255,255,.08);
+  background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+  border-radius:18px;
+  padding:12px 14px;
+  box-shadow:var(--shadow);
+}
+.gauge .num{
+  font-size:28px;
+  font-weight:800;
+  line-height:1;
+}
+.gauge .label{
+  margin-top:4px;
+  font-size:11px;
+  color:var(--muted);
+}
+.statusline{
+  display:flex;
+  gap:8px;
+  align-items:center;
+  margin-top:10px;
+  flex-wrap:wrap;
+}
+.pill{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  font-size:11px;
+  color:var(--muted);
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.06);
+  padding:6px 10px;
+  border-radius:999px;
+}
+.pill strong{color:var(--text)}
+
+.tabs{
+  display:flex;
+  gap:8px;
+  overflow-x:auto;
+  padding:12px 2px 4px;
+  scrollbar-width:none;
+}
+.tabs::-webkit-scrollbar{display:none}
+.tab{
+  flex:0 0 auto;
+  border:1px solid rgba(255,255,255,.08);
+  background:rgba(255,255,255,.03);
+  color:var(--muted);
+  border-radius:14px;
+  padding:10px 14px;
+  font-size:13px;
+  font-weight:700;
+  cursor:pointer;
+  transition:all .2s ease;
+}
+.tab.active{
+  color:#fff;
+  background:linear-gradient(135deg, rgba(109,124,255,.92), rgba(83,215,211,.78));
+  border-color:transparent;
+  box-shadow:0 12px 30px rgba(109,124,255,.25);
+}
+
+.toolbar{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  flex-wrap:wrap;
+  margin:12px 0 16px;
+}
+.search, .input, .textarea, .select{
+  width:100%;
+  border:1px solid rgba(255,255,255,.10);
+  background:rgba(255,255,255,.04);
+  color:var(--text);
+  border-radius:16px;
+  padding:13px 14px;
+  outline:none;
+  font:inherit;
+  transition:border-color .2s, background .2s, box-shadow .2s;
+}
+.search:focus, .input:focus, .textarea:focus, .select:focus{
+  border-color:rgba(109,124,255,.8);
+  box-shadow:0 0 0 4px rgba(109,124,255,.12);
+}
+.search{max-width:100%}
+.btn{
+  border:none;
+  border-radius:16px;
+  padding:12px 14px;
+  font:inherit;
+  font-weight:800;
+  color:#fff;
+  background:linear-gradient(135deg, var(--accent), #4d58f0);
+  box-shadow:0 14px 28px rgba(77,88,240,.22);
+  cursor:pointer;
+  transition:transform .15s ease, filter .2s ease, opacity .2s ease;
+}
+.btn:active{transform:scale(.98)}
+.btn.secondary{
+  background:rgba(255,255,255,.06);
+  box-shadow:none;
+  color:var(--text);
+  border:1px solid rgba(255,255,255,.10);
+}
+.btn.danger{
+  background:linear-gradient(135deg, var(--danger), #d11d45);
+}
+.btn.ghost{
+  background:transparent;
+  color:var(--muted);
+  border:1px dashed rgba(255,255,255,.15);
+  box-shadow:none;
+}
+.btn.small{padding:9px 11px;border-radius:12px;font-size:12px}
+.btn.block{width:100%}
+
+.section{
+  display:none;
+}
+.section.active{display:block}
+
+.grid{
+  display:grid;
+  gap:14px;
+}
+.task-card{
+  position:relative;
+  overflow:hidden;
+  border-radius:var(--radius);
+  border:1px solid rgba(255,255,255,.08);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.03), transparent 22%),
+    linear-gradient(180deg, rgba(17,28,47,.98), rgba(10,18,31,.96));
+  box-shadow:var(--shadow);
+  padding:16px;
+  --p:0;
+  --accentTask:109,124,255;
+  --cardGlow:0;
+  --borderTone:rgba(255,255,255,.08);
+  --cardBg:rgba(255,255,255,.03);
+  transition:transform .2s ease, border-color .25s ease, background .25s ease, box-shadow .25s ease, filter .25s ease;
+}
+.task-card::before{
+  content:"";
+  position:absolute; inset:0;
+  background:
+    radial-gradient(circle at 20% 0%, rgba(var(--accentTask), .25), transparent 40%),
+    radial-gradient(circle at 90% 0%, rgba(255,255,255,.04), transparent 30%),
+    linear-gradient(90deg, rgba(255,255,255,.02), transparent 20%, transparent 80%, rgba(255,255,255,.03));
+  opacity:calc(var(--p) / 100 * .9);
+  pointer-events:none;
+  transition:opacity .3s ease;
+}
+.task-card::after{
+  content:"";
+  position:absolute;
+  left:0;right:0;bottom:0;
+  height:3px;
+  background:linear-gradient(90deg,
+    rgba(49,196,141,.9) 0%,
+    rgba(248,184,78,.95) 40%,
+    rgba(255,95,109,.95) 75%,
+    rgba(191,31,58,.95) 100%);
+  opacity:calc(var(--p)/100);
+  filter:blur(.2px);
+}
+.task-card .inner{position:relative;z-index:1}
+.task-card:hover{transform:translateY(-1px)}
+.task-card.pressure-soft{
+  border-color:rgba(83,215,211,.18);
+}
+.task-card.pressure-mid{
+  border-color:rgba(248,184,78,.30);
+  box-shadow:0 0 0 1px rgba(248,184,78,.10), 0 16px 40px rgba(0,0,0,.36);
+}
+.task-card.pressure-high{
+  border-color:rgba(255,95,109,.38);
+  box-shadow:0 0 0 1px rgba(255,95,109,.12), 0 18px 50px rgba(0,0,0,.42);
+}
+.task-card.pressure-critical{
+  border-color:rgba(255,95,109,.75);
+  background:
+    linear-gradient(180deg, rgba(255,95,109,.10), transparent 20%),
+    linear-gradient(180deg, rgba(20,13,18,.98), rgba(10,8,12,.98));
+  animation:cardPulse .95s infinite;
+}
+@keyframes cardPulse{
+  0%,100%{transform:translateY(0) scale(1)}
+  50%{transform:translateY(-1px) scale(1.004)}
+}
+.task-head{
+  display:flex;
+  gap:12px;
+  align-items:flex-start;
+  justify-content:space-between;
+}
+.task-title{
+  font-size:17px;
+  font-weight:900;
+  line-height:1.35;
+  margin:0;
+}
+.task-sub{
+  margin-top:7px;
+  color:var(--muted);
+  font-size:12px;
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+}
+.badge{
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  padding:6px 10px;
+  border-radius:999px;
+  font-size:11px;
+  font-weight:800;
+  border:1px solid transparent;
+}
+.badge.ok{color:#b3ffe3;background:rgba(49,196,141,.12);border-color:rgba(49,196,141,.24)}
+.badge.warn{color:#ffe6a8;background:rgba(248,184,78,.12);border-color:rgba(248,184,78,.24)}
+.badge.danger{color:#ffd2d7;background:rgba(255,95,109,.12);border-color:rgba(255,95,109,.24)}
+.badge.muted{color:#d4def0;background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.08)}
+
+.task-controls{
+  margin-top:14px;
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+}
+.progress-wrap{
+  margin-top:12px;
+}
+.progress-top{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:8px;
+  margin-bottom:8px;
+  font-size:12px;
+  color:var(--muted);
+}
+.progress-track{
+  position:relative;
+  height:18px;
+  border-radius:999px;
+  overflow:hidden;
+  background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.09);
+}
+.progress-fill{
+  height:100%;
+  width:calc(var(--p) * 1%);
+  border-radius:inherit;
+  background:
+    linear-gradient(90deg,
+      rgba(49,196,141,.95) 0%,
+      rgba(83,215,211,.95) 28%,
+      rgba(248,184,78,.95) 62%,
+      rgba(255,95,109,.95) 86%,
+      rgba(191,31,58,.95) 100%);
+  transition:width .55s cubic-bezier(.22,1,.36,1), filter .25s;
+}
+.progress-grid{
+  position:absolute; inset:0;
+  background:
+    repeating-linear-gradient(90deg,
+      rgba(255,255,255,.12) 0 1px,
+      transparent 1px calc(1%));
+  opacity:.22;
+  pointer-events:none;
+  mix-blend-mode:screen;
+}
+.progress-needle{
+  position:absolute; top:-3px; bottom:-3px;
+  width:2px;
+  background:rgba(255,255,255,.65);
+  opacity:.8;
+  transform:translateX(-50%);
+  pointer-events:none;
+}
+.task-pressureline{
+  margin-top:12px;
+  display:grid;
+  gap:8px;
+}
+.mini-meter{
+  height:8px;
+  border-radius:999px;
+  overflow:hidden;
+  background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.08);
+}
+.mini-meter > div{
+  height:100%;
+  width:calc(var(--tp) * 1%);
+  background:linear-gradient(90deg, rgba(49,196,141,.9), rgba(248,184,78,.95), rgba(255,95,109,.95), rgba(191,31,58,.98));
+  transition:width .45s ease;
+}
+.mini-text{
+  color:var(--muted);
+  font-size:12px;
+  line-height:1.6;
+}
+.note-box{
+  margin-top:10px;
+  padding:12px;
+  border-radius:16px;
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.08);
+  color:#dfe8f4;
+  font-size:13px;
+  line-height:1.75;
+  white-space:pre-wrap;
+}
+.note-box.danger{
+  background:rgba(255,95,109,.08);
+  border-color:rgba(255,95,109,.18);
+}
+.task-empty, .panel-empty{
+  padding:44px 18px;
+  text-align:center;
+  color:var(--muted);
+  border-radius:24px;
+  border:1px dashed rgba(255,255,255,.12);
+  background:rgba(255,255,255,.03);
+}
+
+.footer-note{
+  margin:12px 2px 0;
+  color:var(--muted);
+  font-size:12px;
+  line-height:1.7;
+}
+
+.modal{
+  position:fixed;
+  inset:0;
+  display:none;
+  align-items:flex-end;
+  justify-content:center;
+  z-index:50;
+}
+.modal.active{display:flex}
+.modal .backdrop{
+  position:absolute; inset:0;
+  background:rgba(0,0,0,.68);
+  backdrop-filter:blur(8px);
+}
+.sheet{
+  position:relative;
+  width:100%;
+  max-width:760px;
+  max-height:92vh;
+  overflow:auto;
+  border-radius:26px 26px 0 0;
+  background:linear-gradient(180deg, #121c31, #09101c);
+  border:1px solid rgba(255,255,255,.08);
+  box-shadow:0 -20px 60px rgba(0,0,0,.44);
+  padding:18px;
+  animation:sheetUp .22s ease;
+}
+@keyframes sheetUp{from{transform:translateY(14px);opacity:.8}to{transform:translateY(0);opacity:1}}
+.sheet-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:14px;
+}
+.sheet-title{
+  margin:0;
+  font-size:18px;
+  font-weight:900;
+}
+.sheet-sub{
+  margin:6px 0 0;
+  color:var(--muted);
+  font-size:12px;
+  line-height:1.6;
+}
+.close{
+  width:38px;height:38px;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,.1);
+  background:rgba(255,255,255,.05);
+  color:#fff;
+  cursor:pointer;
+  font-size:22px;
+}
+
+.field{margin-bottom:14px}
+.label{
+  display:block;
+  margin:0 0 8px;
+  color:#cfdaf0;
+  font-size:13px;
+  font-weight:800;
+}
+.textarea{min-height:140px;resize:vertical;line-height:1.7}
+.help{
+  margin-top:7px;
+  color:var(--muted);
+  font-size:12px;
+  line-height:1.65;
+}
+.row{
+  display:grid;
+  gap:10px;
+}
+.row.two{
+  grid-template-columns:1fr 1fr;
+}
+.row.three{
+  grid-template-columns:1.2fr .9fr .9fr;
+}
+.inline{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  flex-wrap:wrap;
+}
+.range{
+  width:100%;
+}
+.range-value{
+  min-width:48px;
+  text-align:center;
+  font-weight:900;
+  color:#fff;
+}
+input[type="range"]{
+  width:100%;
+  accent-color:var(--accent);
+}
+
+.report-card{
+  display:grid;
+  gap:12px;
+}
+.photo-box{
+  border:1px dashed rgba(255,255,255,.18);
+  border-radius:18px;
+  padding:14px;
+  background:rgba(255,255,255,.03);
+}
+.photo-preview{
+  width:100%;
+  max-height:220px;
+  object-fit:cover;
+  border-radius:16px;
+  margin-top:10px;
+  display:none;
+}
+.photo-preview.show{display:block}
+
+.records{
+  display:grid;
+  gap:10px;
+}
+.record{
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,.09);
+  background:rgba(255,255,255,.04);
+  padding:14px;
+}
+.record-top{
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  flex-wrap:wrap;
+  color:#c9d7eb;
+  font-size:12px;
+  margin-bottom:8px;
+}
+.record-text{
+  white-space:pre-wrap;
+  line-height:1.7;
+  font-size:13px;
+  color:#e8eff9;
+}
+.record-img{
+  width:100%;
+  max-height:280px;
+  object-fit:cover;
+  border-radius:14px;
+  margin-top:10px;
+  border:1px solid rgba(255,255,255,.08);
+}
+
+.logs-head{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:12px;
+  flex-wrap:wrap;
+}
+.log-list{
+  display:grid;
+  gap:12px;
+}
+.log-item{
+  border-radius:22px;
+  border:1px solid rgba(255,255,255,.08);
+  background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.03));
+  padding:16px;
+}
+.log-date{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:8px;
+  font-weight:900;
+}
+.log-meta{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-top:10px;
+}
+.log-content{
+  white-space:pre-wrap;
+  line-height:1.75;
+  font-size:13px;
+  color:#eaf0fa;
+}
+.log-sum{
+  margin-top:10px;
+  padding:12px;
+  border-radius:16px;
+  background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.08);
+  color:#dbe6f6;
+  font-size:13px;
+  line-height:1.7;
+}
+.log-actions{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  margin-top:12px;
+}
+.chart-wrap{
+  display:grid;
+  gap:14px;
+}
+.chart-card{
+  padding:16px;
+  border-radius:24px;
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.08);
+}
+.chart-title{
+  font-weight:900;
+  margin-bottom:12px;
+}
+canvas{
+  width:100%;
+  height:220px;
+  display:block;
+}
+.legend{
+  display:flex;
+  flex-wrap:wrap;
+  gap:12px;
+  margin-top:10px;
+  color:var(--muted);
+  font-size:12px;
+}
+.dot{
+  width:10px;height:10px;border-radius:999px;display:inline-block;margin-right:6px;
+}
+
+.memo-list{
+  display:grid;
+  gap:12px;
+}
+.memo-item{
+  border-radius:20px;
+  border:1px solid rgba(255,255,255,.08);
+  background:rgba(255,255,255,.04);
+  padding:14px;
+}
+.memo-time{
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  color:var(--muted);
+  font-size:12px;
+  margin-bottom:8px;
+}
+
+.bottom{
+  position:fixed;
+  left:0;right:0;bottom:0;
+  z-index:25;
+  padding:10px 12px 14px;
+  background:linear-gradient(180deg, rgba(7,17,31,0), rgba(7,17,31,.92) 26%, rgba(7,17,31,.98));
+  border-top:1px solid rgba(255,255,255,.05);
+}
+.bottom-inner{
+  max-width:980px;
+  margin:0 auto;
+  display:grid;
+  grid-template-columns:repeat(4, 1fr);
+  gap:8px;
+}
+.navbtn{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:4px;
+  padding:10px 6px;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,.08);
+  background:rgba(255,255,255,.03);
+  color:var(--muted);
+  font-size:11px;
+  cursor:pointer;
+}
+.navbtn.active{
+  color:#fff;
+  background:linear-gradient(135deg, rgba(109,124,255,.95), rgba(83,215,211,.72));
+  border-color:transparent;
+}
+.navico{
+  width:20px;height:20px;
+}
+
+.fab{
+  position:fixed;
+  right:18px;
+  bottom:88px;
+  z-index:30;
+  width:58px;height:58px;
+  border:none;
+  border-radius:18px;
+  background:linear-gradient(135deg, var(--accent), #4d58f0);
+  color:#fff;
+  font-size:26px;
+  font-weight:900;
+  box-shadow:0 18px 38px rgba(77,88,240,.28);
+  cursor:pointer;
+}
+
+@media (min-width:780px){
+  .app{padding-left:16px;padding-right:16px}
+  .sheet{border-radius:26px}
+}
+@media (max-width:640px){
+  .topbar{align-items:stretch}
+  .brand h1{font-size:20px}
+  .gauge{min-width:112px}
+  .row.two,.row.three{grid-template-columns:1fr}
+  canvas{height:190px}
+  .task-title{font-size:16px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div class="topbar">
+      <div class="brand">
+        <h1>Rainstorm</h1>
+        <p>任务、汇报、日志、小结、图表、备忘录，一起放在一个页面里。</p>
+      </div>
+      <div class="gauge">
+        <div class="num" id="pagePressureNum">0</div>
+        <div class="label" id="pagePressureLabel">今日压力</div>
+      </div>
+    </div>
+    <div class="statusline">
+      <span class="pill">状态：<strong id="pageStateText">平稳</strong></span>
+      <span class="pill">进行中：<strong id="activeCount">0</strong></span>
+      <span class="pill">已完成：<strong id="doneCount">0</strong></span>
+      <span class="pill">今日未汇报：<strong id="missCount">0</strong></span>
+    </div>
+    <div class="tabs">
+      <button class="tab active" data-view="tasks">任务</button>
+      <button class="tab" data-view="logs">日志</button>
+      <button class="tab" data-view="charts">图表</button>
+      <button class="tab" data-view="memo">备忘录</button>
+    </div>
+  </div>
+
+  <div class="toolbar" id="toolbar">
+    <input class="search" id="searchInput" placeholder="搜索任务、日志、备忘录..." />
+    <button class="btn secondary" id="generateSummaryBtn">今日小结</button>
+    <button class="btn secondary" id="importBtn">导入任务</button>
+  </div>
+
+  <section class="section active" id="view-tasks">
+    <div class="grid" id="taskList"></div>
+    <div class="footer-note">
+      导入模板：<strong>任务名,开始时间,截止时间</strong>。<br>
+      时间建议用 <strong>2026-06-08 21:30</strong> 这种格式。目标格数固定 100，不需要手填。
+    </div>
+  </section>
+
+  <section class="section" id="view-logs">
+    <div class="logs-head">
+      <div class="pill">任务日志会自动保存，完成任务后也会归档。</div>
+      <div class="pill">可通过搜索查找任意内容。</div>
+    </div>
+    <div class="log-list" id="logList"></div>
+  </section>
+
+  <section class="section" id="view-charts">
+    <div class="chart-wrap">
+      <div class="chart-card">
+        <div class="chart-title">最近 7 天完成度</div>
+        <canvas id="chartProgress"></canvas>
+        <div class="legend">
+          <span><i class="dot" style="background:#6d7cff"></i>实际完成度</span>
+          <span><i class="dot" style="background:#f8b84e"></i>理论应完成度</span>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">最近 7 天汇报与推进</div>
+        <canvas id="chartActivity"></canvas>
+        <div class="legend">
+          <span><i class="dot" style="background:#31c48d"></i>汇报次数</span>
+          <span><i class="dot" style="background:#ff5f6d"></i>推进格数</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="view-memo">
+    <div class="grid">
+      <div class="task-card" style="--p:0">
+        <div class="inner">
+          <div class="task-head">
+            <div>
+              <h3 class="task-title">备忘录</h3>
+              <div class="task-sub">随手记点事情，自动保存。</div>
+            </div>
+          </div>
+          <div class="field" style="margin-top:14px;">
+            <textarea class="textarea" id="memoText" placeholder="今天要做什么，先记下来..."></textarea>
+            <div class="help">点击保存后会出现在下方列表里。也支持搜索。</div>
+          </div>
+          <div class="inline">
+            <button class="btn" id="saveMemoBtn">保存备忘</button>
+            <button class="btn secondary" id="clearMemoBtn">清空输入</button>
+          </div>
+        </div>
+      </div>
+      <div class="memo-list" id="memoList"></div>
+    </div>
+  </section>
+</div>
+
+<button class="fab" id="fabBtn">+</button>
+
+<div class="bottom">
+  <div class="bottom-inner">
+    <button class="navbtn active" data-view="tasks">
+      <svg class="navico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2"/></svg>
+      任务
+    </button>
+    <button class="navbtn" data-view="logs">
+      <svg class="navico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+      日志
+    </button>
+    <button class="navbtn" data-view="charts">
+      <svg class="navico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V5m0 14h16M8 17v-7m4 7V7m4 10v-4"/></svg>
+      图表
+    </button>
+    <button class="navbtn" data-view="memo">
+      <svg class="navico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
+      备忘
+    </button>
+  </div>
+</div>
+
+<!-- add/edit task modal -->
+<div class="modal" id="taskModal">
+  <div class="backdrop" data-close="taskModal"></div>
+  <div class="sheet">
+    <div class="sheet-head">
+      <div>
+        <h2 class="sheet-title" id="taskModalTitle">添加任务</h2>
+        <p class="sheet-sub">目标格数固定 100。任务可以随时修改标题、开始时间、截止时间。</p>
+      </div>
+      <button class="close" data-close="taskModal">×</button>
+    </div>
+    <div class="row two">
+      <div class="field">
+        <label class="label">任务名</label>
+        <input class="input" id="taskTitle" placeholder="例如：专升本英语" />
+      </div>
+      <div class="field">
+        <label class="label">模式</label>
+        <select class="select" id="taskMode">
+          <option value="add">新增任务</option>
+          <option value="edit">编辑当前任务</option>
+        </select>
+      </div>
+    </div>
+    <div class="row three">
+      <div class="field">
+        <label class="label">开始时间</label>
+        <input class="input" id="taskStart" placeholder="2026-06-08 08:00" />
+      </div>
+      <div class="field">
+        <label class="label">截止时间</label>
+        <input class="input" id="taskEnd" placeholder="2026-06-20 23:59" />
+      </div>
+      <div class="field">
+        <label class="label">预览压力</label>
+        <div class="pill" id="taskPressurePreview">0</div>
+      </div>
+    </div>
+    <div class="inline">
+      <button class="btn" id="saveTaskBtn">保存任务</button>
+      <button class="btn secondary" data-close="taskModal">取消</button>
+    </div>
+  </div>
+</div>
+
+<!-- import modal -->
+<div class="modal" id="importModal">
+  <div class="backdrop" data-close="importModal"></div>
+  <div class="sheet">
+    <div class="sheet-head">
+      <div>
+        <h2 class="sheet-title">文本导入任务</h2>
+        <p class="sheet-sub">每行一条，格式：任务名,开始时间,截止时间</p>
+      </div>
+      <button class="close" data-close="importModal">×</button>
+    </div>
+    <div class="field">
+      <textarea class="textarea" id="importText" placeholder="英语复习,2026-06-08 08:00,2026-06-15 23:59
+会计作业,2026-06-08 09:00,2026-06-12 22:00"></textarea>
+      <div class="help">支持中文逗号和英文逗号。目标格数固定 100，不需要在模板里写。</div>
+    </div>
+    <div class="inline">
+      <button class="btn" id="doImportBtn">导入</button>
+      <button class="btn secondary" data-close="importModal">取消</button>
+    </div>
+  </div>
+</div>
+
+<!-- report modal -->
+<div class="modal" id="reportModal">
+  <div class="backdrop" data-close="reportModal"></div>
+  <div class="sheet">
+    <div class="sheet-head">
+      <div>
+        <h2 class="sheet-title" id="reportTitle">任务汇报</h2>
+        <p class="sheet-sub">支持文字、照片，或者两者一起。汇报一次可以推进若干格。</p>
+      </div>
+      <button class="close" data-close="reportModal">×</button>
+    </div>
+    <div class="report-card">
+      <div class="field">
+        <label class="label">本次推进格数</label>
+        <div class="inline">
+          <input class="range" type="range" min="1" max="30" value="5" id="reportStep" />
+          <div class="range-value" id="reportStepValue">5</div>
+        </div>
+        <div class="help">你可以按实际完成量填写，系统会据此更新压力值和完成度。</div>
+      </div>
+      <div class="field">
+        <label class="label">成果描述</label>
+        <textarea class="textarea" id="reportText" placeholder="这次完成了什么，写清楚。"></textarea>
+      </div>
+      <div class="field">
+        <label class="label">照片证明（可选）</label>
+        <div class="photo-box">
+          <input class="input" type="file" id="reportPhoto" accept="image/*" />
+          <img class="photo-preview" id="reportPhotoPreview" />
+          <div class="help">本地保存。照片太大时，浏览器存储会更快满。</div>
+        </div>
+      </div>
+      <div class="inline">
+        <button class="btn" id="submitReportBtn">提交汇报</button>
+        <button class="btn secondary" data-close="reportModal">取消</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- records modal -->
+<div class="modal" id="recordsModal">
+  <div class="backdrop" data-close="recordsModal"></div>
+  <div class="sheet">
+    <div class="sheet-head">
+      <div>
+        <h2 class="sheet-title" id="recordsTitle">汇报记录</h2>
+        <p class="sheet-sub">每次汇报都会留档。</p>
+      </div>
+      <button class="close" data-close="recordsModal">×</button>
+    </div>
+    <div class="records" id="recordsList"></div>
+  </div>
+</div>
+
+<!-- summary modal -->
+<div class="modal" id="summaryModal">
+  <div class="backdrop" data-close="summaryModal"></div>
+  <div class="sheet">
+    <div class="sheet-head">
+      <div>
+        <h2 class="sheet-title">今日小结</h2>
+        <p class="sheet-sub">系统会根据当天任务状态自动生成。你也可以直接保存到日志。</p>
+      </div>
+      <button class="close" data-close="summaryModal">×</button>
+    </div>
+    <div class="field">
+      <textarea class="textarea" id="summaryText" readonly></textarea>
+    </div>
+    <div class="inline">
+      <button class="btn" id="saveSummaryBtn">保存到日志</button>
+      <button class="btn secondary" data-close="summaryModal">关闭</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = 'rainstorm-pro-v5';
+const TODAY = new Date();
+
+const state = {
+  view: 'tasks',
+  tasks: [],
+  logs: [],
+  memos: [],
+  currentTaskId: null,
+  currentRecordTaskId: null,
+  currentEditTaskId: null,
+  summaryDraft: ''
+};
+
+function pad(n){return String(n).padStart(2,'0')}
+function now(){return new Date()}
+function isoLocal(d){
+  if(!(d instanceof Date) || isNaN(d.getTime())) return '';
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+function parseDateFlexible(str){
+  if(!str) return null;
+  const s = String(str).trim().replaceAll('年','-').replaceAll('月','-').replaceAll('日','').replaceAll('/','-').replace(/T/,' ');
+  const m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:\s+(\d{1,2}):(\d{1,2}))?$/);
+  if(m){
+    const d = new Date(+m[1], +m[2]-1, +m[3], +(m[4]||0), +(m[5]||0), 0, 0);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  const d = new Date(s);
+  return isNaN(d.getTime()) ? null : d;
+}
+function fmtDateTime(d){
+  if(!(d instanceof Date) || isNaN(d.getTime())) return '—';
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+function fmtDateOnly(d){
+  if(!(d instanceof Date) || isNaN(d.getTime())) return '—';
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+}
+function getTodayKey(){
+  const d = now();
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+}
+function clamp(v,min,max){ return Math.max(min, Math.min(max, v)); }
+function uid(){ return Date.now() + Math.floor(Math.random() * 100000); }
+function escapeHtml(str=''){
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+function dataUrlFromFile(file){
+  return new Promise((resolve,reject)=>{
+    const reader = new FileReader();
+    reader.onload = ()=>resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+function save(){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({
+    tasks: state.tasks,
+    logs: state.logs,
+    memos: state.memos
+  }));
+}
+function load(){
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if(raw){
+    try{
+      const data = JSON.parse(raw);
+      state.tasks = Array.isArray(data.tasks) ? data.tasks : [];
+      state.logs = Array.isArray(data.logs) ? data.logs : [];
+      state.memos = Array.isArray(data.memos) ? data.memos : [];
+      return;
+    }catch(e){}
+  }
+  state.tasks = seedTasks();
+  state.logs = [];
+  state.memos = [];
+  save();
+}
+function seedTasks(){
+  const t = now();
+  const d1 = new Date(t.getTime() + 2*86400000);
+  const d2 = new Date(t.getTime() + 4*86400000);
+  const d3 = new Date(t.getTime() + 6*86400000);
+  return [
+    mkTask('专升本英语', new Date(t.getTime()-86400000), d1),
+    mkTask('会计作业', new Date(t.getTime()-86400000), d2),
+    mkTask('高数错题整理', new Date(t.getTime()-86400000), d3)
+  ];
+}
+function mkTask(title, start, end){
+  return {
+    id: uid(),
+    title,
+    start: isoLocal(start),
+    end: isoLocal(end),
+    progress: 0,
+    reports: [],
+    createdAt: isoLocal(now()),
+    completedAt: null,
+    archived: false
+  };
+}
+function taskDateStart(task){ return parseDateFlexible(task.start) || now(); }
+function taskDateEnd(task){ return parseDateFlexible(task.end) || now(); }
+function taskIsActive(task){
+  return !task.archived && task.progress < 100;
+}
+function taskHasStarted(task){
+  return now() >= taskDateStart(task);
+}
+function expectedProgress(task, refDate = now()){
+  const s = taskDateStart(task);
+  const e = taskDateEnd(task);
+  if(refDate <= s) return 0;
+  if(refDate >= e) return 100;
+  const total = e - s;
+  if(total <= 0) return 100;
+  return clamp(Math.round((refDate - s) / total * 100), 0, 100);
+}
+function taskPressure(task, refDate = now()){
+  if(task.progress >= 100) return 0;
+  const s = taskDateStart(task);
+  const e = taskDateEnd(task);
+  if(refDate < s) return 0;
+  const daysLeft = (e - refDate) / 86400000;
+  const exp = expectedProgress(task, refDate);
+  const lag = clamp(exp - task.progress, 0, 100);
+  const overdue = clamp((refDate - e) / 86400000, 0, 999);
+
+  let p = 0;
+  if(task.reports.some(r => r.date === getTodayKey())) p -= 8; // 汇报过会稍微缓和
+  else p += 14; // 今日没汇报直接加压
+  p += lag * 0.7;
+  if(daysLeft <= 7) p += (7 - daysLeft) * 3.2;
+  if(daysLeft <= 3) p += (3 - daysLeft) * 6;
+  if(daysLeft <= 1) p += 18;
+  if(daysLeft < 0) p += 35 + overdue * 12;
+  if(task.progress < exp * 0.25) p += 10;
+  else if(task.progress < exp * 0.55) p += 6;
+  else if(task.progress < exp * 0.85) p += 3;
+  return clamp(Math.round(p), 0, 100);
+}
+function pagePressure(){
+  const active = state.tasks.filter(taskIsActive).filter(t => taskHasStarted(t));
+  if(active.length === 0) return 0;
+  let sum = 0;
+  let weight = 0;
+  const today = getTodayKey();
+  active.forEach(t=>{
+    const p = taskPressure(t);
+    const pending = t.reports.some(r=>r.date===today) ? 0.9 : 1.2;
+    const urgency = Math.max(0.8, 1 + ((100 - t.progress)/100));
+    sum += p * pending * urgency;
+    weight += pending * urgency;
+  });
+  return clamp(Math.round(sum / weight), 0, 100);
+}
+function pageStateText(p){
+  if(p === 0) return '平稳';
+  if(p < 18) return '轻微波动';
+  if(p < 38) return '开始绷紧';
+  if(p < 58) return '明显压力';
+  if(p < 76) return '高压运行';
+  if(p < 92) return '危险升高';
+  return '极度警戒';
+}
+function applyPagePressure(){
+  const p = pagePressure();
+  document.documentElement.style.setProperty('--pagePressure', p);
+  document.getElementById('pagePressureNum').textContent = p;
+  document.getElementById('pageStateText').textContent = pageStateText(p);
+
+  document.body.classList.remove('pressure-low','pressure-mid','pressure-high','pressure-critical');
+  if(p >= 85) document.body.classList.add('pressure-critical');
+  else if(p >= 60) document.body.classList.add('pressure-high');
+  else if(p >= 30) document.body.classList.add('pressure-mid');
+  else if(p > 0) document.body.classList.add('pressure-low');
+
+  const active = state.tasks.filter(task => taskIsActive(task) && taskHasStarted(task));
+  const missed = active.filter(t => !t.reports.some(r => r.date === getTodayKey())).length;
+  document.getElementById('activeCount').textContent = active.length;
+  document.getElementById('doneCount').textContent = state.tasks.filter(t=>t.progress>=100 || t.archived).length;
+  document.getElementById('missCount').textContent = missed;
+}
+function autoArchiveCompleted(task){
+  if(task.progress < 100 || task.archived) return;
+  task.archived = true;
+  task.completedAt = isoLocal(now());
+  const logDate = getTodayKey();
+  const existing = state.logs.find(l => l.date === logDate);
+  const entry = {
+    type: 'task-complete',
+    taskId: task.id,
+    title: task.title,
+    date: logDate,
+    content: `任务完成：${task.title}\n完成时间：${task.completedAt}\n汇报次数：${task.reports.length}\n最终进度：100/100`,
+    stats: { progress: 100, reports: task.reports.length, pressure: 0 }
+  };
+  if(existing){
+    existing.items = existing.items || [];
+    existing.items.push(entry);
+    existing.content = buildLogContent(existing);
+    existing.stats.done += 1;
+  }else{
+    state.logs.push({
+      date: logDate,
+      items: [entry],
+      content: buildLogContent({date:logDate, items:[entry], summary:''}),
+      summary: '',
+      stats: { done:1, reported:0, missed:0, pressure:pagePressure() }
+    });
+  }
+}
+function buildDailySummary(dateKey){
+  const activeToday = state.tasks.filter(t => parseDateFlexible(t.start) <= now() && parseDateFlexible(t.end) >= now());
+  const completedToday = state.tasks.filter(t => t.archived && t.completedAt && fmtDateOnly(parseDateFlexible(t.completedAt)) === dateKey);
+  const todayReports = state.tasks.flatMap(t => (t.reports||[]).filter(r=>r.date===dateKey).map(r=>({task:t.title, ...r})));
+  const totalProgress = todayReports.reduce((a,b)=>a + (b.step||0), 0);
+  const missed = activeToday.filter(t => !(t.reports||[]).some(r=>r.date===dateKey)).length;
+  const p = pagePressure();
+  let mood = '稳定';
+  if(p >= 85) mood = '压力很大';
+  else if(p >= 60) mood = '明显紧张';
+  else if(p >= 35) mood = '略有压力';
+  const lines = [];
+  lines.push(`${dateKey} 今日小结`);
+  lines.push(`当前压力：${p}/100（${mood}）`);
+  lines.push(`今日进行中任务：${activeToday.length}`);
+  lines.push(`今日未汇报：${missed}`);
+  lines.push(`今日汇报次数：${todayReports.length}`);
+  lines.push(`今日推进格数：${totalProgress}`);
+  lines.push('');
+  if(todayReports.length){
+    lines.push('今日汇报：');
+    todayReports.forEach(r=>{
+      lines.push(`- ${r.task}：+${r.step}格${r.text ? `｜${r.text}` : ''}`);
+    });
+  }else{
+    lines.push('今日没有汇报记录。');
+  }
+  if(completedToday.length){
+    lines.push('');
+    lines.push('今日完成：');
+    completedToday.forEach(t=>lines.push(`- ${t.title}`));
+  }
+  const lagging = activeToday
+    .map(t=>({t, p:taskPressure(t)}))
+    .filter(x=>x.p >= 50)
+    .sort((a,b)=>b.p-a.p);
+  if(lagging.length){
+    lines.push('');
+    lines.push('需要重点关注：');
+    lagging.slice(0,4).forEach(x=>{
+      const exp = expectedProgress(x.t);
+      lines.push(`- ${x.t.title}：当前 ${x.t.progress}/100，预计应到 ${exp}%，压力 ${x.p}/100`);
+    });
+  }
+  return lines.join('\n');
+}
+function buildLogContent(log){
+  const lines = [];
+  lines.push(`日期：${log.date}`);
+  if(log.summary) lines.push(`小结：${log.summary}`);
+  lines.push('');
+  (log.items || []).forEach(item=>{
+    lines.push(item.content);
+    lines.push('');
+  });
+  return lines.join('\n').trim();
+}
+function ensureDailyLog(dateKey){
+  let log = state.logs.find(l=>l.date===dateKey);
+  if(!log){
+    log = {date:dateKey, items:[], summary:'', content:'', stats:{done:0,reported:0,missed:0,pressure:pagePressure()}};
+    state.logs.unshift(log);
+  }
+  return log;
+}
+function saveLogSummary(dateKey, summary){
+  const log = ensureDailyLog(dateKey);
+  log.summary = summary;
+  log.content = buildLogContent(log);
+  log.stats = log.stats || {};
+  log.stats.pressure = pagePressure();
+}
+function render(){
+  const q = (document.getElementById('searchInput').value || '').trim().toLowerCase();
+  renderTasks(q);
+  renderLogs(q);
+  renderCharts();
+  renderMemos(q);
+  applyPagePressure();
+  save();
+}
+function renderTasks(q=''){
+  const list = document.getElementById('taskList');
+  const active = state.tasks.filter(taskIsActive).sort((a,b)=>taskDateEnd(a)-taskDateEnd(b));
+  const filtered = active.filter(t=>{
+    if(!q) return true;
+    const blob = [t.title, t.start, t.end, t.progress, ...(t.reports||[]).map(r=>r.text || '')].join(' ').toLowerCase();
+    return blob.includes(q);
+  });
+
+  if(!filtered.length){
+    list.innerHTML = `<div class="task-empty">没有可显示的任务。可以点右下角添加，或者用“导入任务”批量输入。</div>`;
+    return;
+  }
+
+  const today = getTodayKey();
+  list.innerHTML = filtered.map(task=>{
+    const p = taskPressure(task);
+    const exp = expectedProgress(task);
+    const started = taskHasStarted(task);
+    const end = taskDateEnd(task);
+    const start = taskDateStart(task);
+    const hasTodayReport = (task.reports || []).some(r=>r.date===today);
+    const daysLeft = Math.ceil((end - now()) / 86400000);
+    const className = p >= 85 ? 'pressure-critical' : p >= 60 ? 'pressure-high' : p >= 30 ? 'pressure-mid' : p > 0 ? 'pressure-soft' : '';
+    const stateBadge = !started ? `<span class="badge muted">未开始</span>`
+      : p >= 85 ? `<span class="badge danger">极度紧迫</span>`
+      : p >= 60 ? `<span class="badge danger">强烈压力</span>`
+      : p >= 30 ? `<span class="badge warn">压力上升</span>`
+      : `<span class="badge ok">状态正常</span>`;
+    const hint = !started
+      ? `还没到开始时间。`
+      : daysLeft < 0
+        ? `已逾期 ${Math.abs(daysLeft)} 天，压力会持续升高。`
+        : daysLeft <= 1
+          ? `只剩 ${Math.max(0, daysLeft)} 天，推进必须更密集。`
+          : hasTodayReport
+            ? `今日已汇报，压力稍微缓和。`
+            : `今日还没汇报，系统会继续加压。`;
+    const actionText = started ? '汇报任务' : '未开始';
+    const fillStyle = `--p:${task.progress};--tp:${p};`;
+    const needleLeft = `${exp}%`;
+
+    return `
+      <article class="task-card ${className}" style="${fillStyle}">
+        <div class="inner">
+          <div class="task-head">
+            <div style="min-width:0">
+              <h3 class="task-title">${escapeHtml(task.title)}</h3>
+              <div class="task-sub">
+                <span>开始：${escapeHtml(task.start)}</span>
+                <span>截止：${escapeHtml(task.end)}</span>
+                <span>完成：${task.progress}/100</span>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end">
+              ${stateBadge}
+              <div class="inline" style="justify-content:flex-end;margin:0">
+                <button class="btn small secondary" data-act="edit" data-id="${task.id}">编辑</button>
+                <button class="btn small secondary" data-act="records" data-id="${task.id}">记录</button>
+                <button class="btn small danger" data-act="delete" data-id="${task.id}">删除</button>
+              </div>
+            </div>
+          </div>
+          <div class="task-pressureline">
+            <div class="mini-meter"><div style="--tp:${p}"></div></div>
+            <div class="mini-text">单个任务压力值：<strong style="color:#fff">${p}/100</strong>。${hint}</div>
+          </div>
+          <div class="progress-wrap">
+            <div class="progress-top">
+              <span>进度条（100格）</span>
+              <span>${task.progress}/100，理论应到 ${exp}/100</span>
+            </div>
+            <div class="progress-track">
+              <div class="progress-fill"></div>
+              <div class="progress-grid"></div>
+              <div class="progress-needle" style="left:${needleLeft}"></div>
+            </div>
+          </div>
+          <div class="note-box ${p >= 70 ? 'danger' : ''}">${escapeHtml(hint)}${started ? (hasTodayReport ? '\n今天已经汇报过，可以继续推进。' : '\n今天至少需要一次汇报。') : ''}</div>
+          <div class="task-controls">
+            <button class="btn ${started ? '' : 'secondary'} small" data-act="report" data-id="${task.id}" ${started ? '' : 'disabled'}>${actionText}</button>
+            <button class="btn secondary small" data-act="quick" data-id="${task.id}" ${started ? '' : 'disabled'}>快速 +5</button>
+          </div>
+        </div>
+      </article>
+    `;
+  }).join('');
+}
+function renderLogs(q=''){
+  const list = document.getElementById('logList');
+  const logs = [...state.logs].sort((a,b)=>b.date.localeCompare(a.date));
+  const filtered = logs.filter(l=>{
+    if(!q) return true;
+    const blob = [l.date, l.summary || '', l.content || '', JSON.stringify(l.items||[])].join(' ').toLowerCase();
+    return blob.includes(q);
+  });
+  if(!filtered.length){
+    list.innerHTML = `<div class="panel-empty">没有匹配的日志。先生成一个今日小结，或者让任务完成后自动归档。</div>`;
+    return;
+  }
+  list.innerHTML = filtered.map(log=>{
+    const content = log.content || buildLogContent(log);
+    const stats = log.stats || {};
+    return `
+      <div class="log-item">
+        <div class="log-date">
+          <span>📅 ${escapeHtml(log.date)}</span>
+          <button class="btn small secondary" data-act="summary" data-date="${log.date}">查看小结</button>
+        </div>
+        <div class="log-content">${escapeHtml(content)}</div>
+        <div class="log-sum">
+          汇总：完成 ${stats.done || 0} 项，汇报 ${stats.reported || (log.items ? log.items.length : 0)} 次，今日压力 ${stats.pressure ?? pagePressure()}/100。
+        </div>
+        <div class="log-meta">
+          <span class="badge ok">成长记录</span>
+          <span class="badge muted">可搜索</span>
+          <span class="badge muted">自动归档</span>
+        </div>
+        <div class="log-actions">
+          <button class="btn small secondary" data-act="delete-log" data-date="${log.date}">删除日志</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+function renderMemos(q=''){
+  const list = document.getElementById('memoList');
+  const memos = [...state.memos].sort((a,b)=>b.time.localeCompare(a.time));
+  const filtered = memos.filter(m=>{
+    if(!q) return true;
+    return [m.text, m.time].join(' ').toLowerCase().includes(q);
+  });
+  if(!filtered.length){
+    list.innerHTML = `<div class="panel-empty">还没有备忘录。记一点小事，别让脑子一直挂着。</div>`;
+    return;
+  }
+  list.innerHTML = filtered.map((m, idx)=>`
+    <div class="memo-item">
+      <div class="memo-time">
+        <span>${escapeHtml(m.time)}</span>
+        <button class="btn small secondary" data-act="delete-memo" data-id="${m.id}">删除</button>
+      </div>
+      <div class="record-text">${escapeHtml(m.text)}</div>
+    </div>
+  `).join('');
+}
+function renderCharts(){
+  drawProgressChart();
+  drawActivityChart();
+}
+function daySeries(days=7){
+  const arr = [];
+  for(let i=days-1;i>=0;i--){
+    const d = new Date();
+    d.setDate(d.getDate()-i);
+    arr.push(fmtDateOnly(d));
+  }
+  return arr;
+}
+function dailyActualCompletion(dateKey){
+  const tasks = state.tasks.filter(t => parseDateFlexible(t.start) <= parseDateFlexible(dateKey + ' 23:59') && parseDateFlexible(t.end) >= parseDateFlexible(dateKey + ' 00:00'));
+  if(!tasks.length) return 0;
+  const sum = tasks.reduce((acc,t)=>{
+    const byDate = (t.reports||[])
+      .filter(r => r.date <= dateKey)
+      .reduce((a,r)=>a + (r.step || 0), 0);
+    return acc + clamp(byDate, 0, 100);
+  },0);
+  return Math.round(sum / tasks.length);
+}
+function dailyExpectedCompletion(dateKey){
+  const ref = parseDateFlexible(dateKey + ' 23:59');
+  const tasks = state.tasks.filter(t => parseDateFlexible(t.start) <= ref && parseDateFlexible(t.end) >= parseDateFlexible(dateKey + ' 00:00'));
+  if(!tasks.length) return 0;
+  const sum = tasks.reduce((acc,t)=>acc + expectedProgress(t, ref), 0);
+  return Math.round(sum / tasks.length);
+}
+function drawProgressChart(){
+  const c = document.getElementById('chartProgress');
+  const ctx = c.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const rect = c.getBoundingClientRect();
+  c.width = rect.width * dpr;
+  c.height = rect.height * dpr;
+  ctx.scale(dpr,dpr);
+  const w = rect.width, h = rect.height;
+  ctx.clearRect(0,0,w,h);
+  const dataDates = daySeries(7);
+  const actual = dataDates.map(d => dailyActualCompletion(d));
+  const expect = dataDates.map(d => dailyExpectedCompletion(d));
+  const padL=42, padR=12, padT=18, padB=28;
+  const cw=w-padL-padR, ch=h-padT-padB;
+  ctx.strokeStyle='rgba(255,255,255,.08)';
+  for(let i=0;i<=5;i++){
+    const y = padT + ch * i/5;
+    ctx.beginPath(); ctx.moveTo(padL,y); ctx.lineTo(padL+cw,y); ctx.stroke();
+    ctx.fillStyle='rgba(173,187,208,.9)';
+    ctx.font='11px sans-serif';
+    ctx.textAlign='right';
+    ctx.fillText(`${100 - i*20}%`, padL-8, y+4);
+  }
+  const xStep = cw / (dataDates.length - 1 || 1);
+  function line(arr, color){
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    arr.forEach((v,i)=>{
+      const x = padL + i*xStep;
+      const y = padT + ch * (1 - v/100);
+      i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+    });
+    ctx.stroke();
+    ctx.fillStyle = color;
+    arr.forEach((v,i)=>{
+      const x = padL + i*xStep;
+      const y = padT + ch * (1 - v/100);
+      ctx.beginPath(); ctx.arc(x,y,3.4,0,Math.PI*2); ctx.fill();
+    });
+  }
+  line(expect,'#f8b84e');
+  line(actual,'#6d7cff');
+  ctx.fillStyle='rgba(173,187,208,.95)';
+  ctx.font='11px sans-serif';
+  ctx.textAlign='center';
+  dataDates.forEach((d,i)=>{
+    ctx.fillText(d.slice(5), padL + i*xStep, h-8);
+  });
+}
+function drawActivityChart(){
+  const c = document.getElementById('chartActivity');
+  const ctx = c.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const rect = c.getBoundingClientRect();
+  c.width = rect.width * dpr;
+  c.height = rect.height * dpr;
+  ctx.scale(dpr,dpr);
+  const w = rect.width, h = rect.height;
+  ctx.clearRect(0,0,w,h);
+  const dataDates = daySeries(7);
+  const reports = dataDates.map(dateKey => state.tasks.reduce((n,t)=>n + ((t.reports||[]).some(r=>r.date===dateKey) ? 1 : 0), 0));
+  const steps = dataDates.map(dateKey => state.tasks.reduce((n,t)=>n + (t.reports||[]).filter(r=>r.date===dateKey).reduce((a,b)=>a + (b.step || 0),0), 0));
+  const maxVal = Math.max(1, ...reports, ...steps);
+  const padL=32, padR=12, padT=18, padB=28;
+  const cw=w-padL-padR, ch=h-padT-padB;
+  ctx.strokeStyle='rgba(255,255,255,.08)';
+  for(let i=0;i<=4;i++){
+    const y = padT + ch * i/4;
+    ctx.beginPath(); ctx.moveTo(padL,y); ctx.lineTo(padL+cw,y); ctx.stroke();
+  }
+  const barW = Math.max(6, cw / dataDates.length * .28);
+  const stepX = cw / dataDates.length;
+  reports.forEach((v,i)=>{
+    const x = padL + i*stepX + stepX*.14;
+    const barH = ch * (v/maxVal);
+    ctx.fillStyle='rgba(49,196,141,.82)';
+    ctx.fillRect(x, padT + ch - barH, barW, barH);
+  });
+  steps.forEach((v,i)=>{
+    const x = padL + i*stepX + stepX*.56;
+    const barH = ch * (v/maxVal);
+    ctx.fillStyle='rgba(255,95,109,.78)';
+    ctx.fillRect(x, padT + ch - barH, barW, barH);
+  });
+  ctx.fillStyle='rgba(173,187,208,.95)';
+  ctx.font='11px sans-serif';
+  ctx.textAlign='center';
+  dataDates.forEach((d,i)=>{
+    ctx.fillText(d.slice(5), padL + i*stepX + stepX/2, h-8);
+  });
+}
+function openModal(id){ document.getElementById(id).classList.add('active'); }
+function closeModal(id){ document.getElementById(id).classList.remove('active'); }
+function closeAllModals(){
+  ['taskModal','importModal','reportModal','recordsModal','summaryModal'].forEach(closeModal);
+}
+function setView(view){
+  state.view = view;
+  document.querySelectorAll('.section').forEach(el=>el.classList.remove('active'));
+  document.getElementById(`view-${view}`).classList.add('active');
+  document.querySelectorAll('.tab,.navbtn').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll(`[data-view="${view}"]`).forEach(el=>el.classList.add('active'));
+  const toolbar = document.getElementById('toolbar');
+  toolbar.style.display = 'flex';
+  if(view === 'memo'){
+    // keep toolbar
+  }
+  if(view === 'charts'){
+    // keep toolbar
+  }
+}
+function openTaskModal(mode='add', task=null){
+  state.currentEditTaskId = task ? task.id : null;
+  document.getElementById('taskModalTitle').textContent = mode === 'edit' ? '编辑任务' : '添加任务';
+  document.getElementById('taskMode').value = mode;
+  document.getElementById('taskTitle').value = task ? task.title : '';
+  document.getElementById('taskStart').value = task ? task.start : isoLocal(now());
+  const end = task ? task.end : isoLocal(new Date(now().getTime() + 3*86400000));
+  document.getElementById('taskEnd').value = end;
+  document.getElementById('taskPressurePreview').textContent = task ? `${taskPressure(task)}/100` : '0/100';
+  openModal('taskModal');
+}
+function openImportModal(){
+  document.getElementById('importText').value = '';
+  openModal('importModal');
+}
+function openReportModal(taskId){
+  const task = state.tasks.find(t=>t.id===taskId);
+  if(!task) return;
+  state.currentTaskId = taskId;
+  document.getElementById('reportTitle').textContent = `任务汇报：${task.title}`;
+  document.getElementById('reportText').value = '';
+  document.getElementById('reportStep').value = 5;
+  document.getElementById('reportStepValue').textContent = 5;
+  document.getElementById('reportPhoto').value = '';
+  document.getElementById('reportPhotoPreview').src = '';
+  document.getElementById('reportPhotoPreview').classList.remove('show');
+  openModal('reportModal');
+}
+function openRecordsModal(taskId){
+  const task = state.tasks.find(t=>t.id===taskId);
+  if(!task) return;
+  state.currentRecordTaskId = taskId;
+  document.getElementById('recordsTitle').textContent = `汇报记录：${task.title}`;
+  const list = document.getElementById('recordsList');
+  if(!task.reports.length){
+    list.innerHTML = `<div class="panel-empty">还没有汇报记录。</div>`;
+  }else{
+    list.innerHTML = [...task.reports].reverse().map(r=>`
+      <div class="record">
+        <div class="record-top">
+          <span>${escapeHtml(r.time)}</span>
+          <span>+${r.step} 格</span>
+        </div>
+        <div class="record-text">${escapeHtml(r.text || '（无文字说明）')}</div>
+        ${r.photo ? `<img class="record-img" src="${r.photo}" alt="report photo">` : ''}
+      </div>
+    `).join('');
+  }
+  openModal('recordsModal');
+}
+function openSummaryModal(){
+  const dateKey = getTodayKey();
+  const text = buildDailySummary(dateKey);
+  state.summaryDraft = text;
+  document.getElementById('summaryText').value = text;
+  openModal('summaryModal');
+}
+function addOrUpdateTask(){
+  const title = document.getElementById('taskTitle').value.trim();
+  const start = document.getElementById('taskStart').value.trim();
+  const end = document.getElementById('taskEnd').value.trim();
+  const mode = document.getElementById('taskMode').value;
+  if(!title){ alert('先填任务名'); return; }
+  const sd = parseDateFlexible(start);
+  const ed = parseDateFlexible(end);
+  if(!sd || !ed){ alert('开始时间和截止时间格式不对'); return; }
+  if(sd >= ed){ alert('开始时间必须早于截止时间'); return; }
+
+  if(mode === 'edit' && state.currentEditTaskId){
+    const task = state.tasks.find(t=>t.id===state.currentEditTaskId);
+    if(!task) return;
+    task.title = title;
+    task.start = fmtDateTime(sd);
+    task.end = fmtDateTime(ed);
+  }else{
+    state.tasks.unshift(mkTask(title, sd, ed));
+  }
+  save();
+  closeModal('taskModal');
+  render();
+}
+async function submitReport(){
+  const task = state.tasks.find(t=>t.id===state.currentTaskId);
+  if(!task) return;
+  const step = clamp(parseInt(document.getElementById('reportStep').value || '5',10),1,30);
+  const text = document.getElementById('reportText').value.trim();
+  const file = document.getElementById('reportPhoto').files[0];
+  let photo = '';
+  if(file){
+    photo = await dataUrlFromFile(file);
+  }
+  const record = {
+    id: uid(),
+    date: getTodayKey(),
+    time: isoLocal(now()),
+    step,
+    text,
+    photo
+  };
+  task.reports = task.reports || [];
+  task.reports.push(record);
+  task.progress = clamp((task.progress || 0) + step, 0, 100);
+  if(task.progress >= 100){
+    task.progress = 100;
+    autoArchiveCompleted(task);
+  }
+  const log = ensureDailyLog(getTodayKey());
+  log.items = log.items || [];
+  log.items.push({
+    type:'report',
+    taskId: task.id,
+    title: task.title,
+    date: getTodayKey(),
+    content: `任务汇报：${task.title}\n时间：${record.time}\n推进：+${step}格\n说明：${text || '（无）'}`,
+    step,
+    text,
+    photo: !!photo
+  });
+  log.stats = log.stats || {done:0,reported:0,missed:0,pressure:0};
+  log.stats.reported = (log.stats.reported || 0) + 1;
+  log.stats.pressure = pagePressure();
+  log.content = buildLogContent(log);
+  save();
+  closeModal('reportModal');
+  render();
+}
+function importTasksFromText(){
+  const txt = document.getElementById('importText').value;
+  const lines = txt.split(/\n+/).map(s=>s.trim()).filter(Boolean);
+  const added = [];
+  lines.forEach(line=>{
+    const normalized = line.replaceAll('，', ',');
+    const parts = normalized.split(',').map(s=>s.trim());
+    if(parts.length < 3) return;
+    const title = parts[0];
+    const start = parseDateFlexible(parts[1]);
+    const end = parseDateFlexible(parts[2]);
+    if(!title || !start || !end || start >= end) return;
+    added.push(mkTask(title, start, end));
+  });
+  if(!added.length){
+    alert('没有解析到可用任务。格式要像：任务名,开始时间,截止时间');
+    return;
+  }
+  state.tasks = [...added, ...state.tasks];
+  save();
+  closeModal('importModal');
+  render();
+}
+function saveMemo(){
+  const text = document.getElementById('memoText').value.trim();
+  if(!text){ alert('先写一点内容'); return; }
+  state.memos.unshift({ id: uid(), text, time: isoLocal(now()) });
+  document.getElementById('memoText').value = '';
+  save();
+  render();
+}
+function deleteTask(id){
+  const idx = state.tasks.findIndex(t=>t.id===id);
+  if(idx < 0) return;
+  if(confirm('删除这个任务？')){ state.tasks.splice(idx,1); save(); render(); }
+}
+function deleteLog(date){
+  const idx = state.logs.findIndex(l=>l.date===date);
+  if(idx < 0) return;
+  if(confirm('删除这天日志？')){ state.logs.splice(idx,1); save(); render(); }
+}
+function deleteMemo(id){
+  const idx = state.memos.findIndex(m=>m.id===id);
+  if(idx < 0) return;
+  if(confirm('删除这条备忘？')){ state.memos.splice(idx,1); save(); render(); }
+}
+function showSummaryForDate(dateKey){
+  const log = state.logs.find(l=>l.date===dateKey);
+  if(!log){ alert('这天还没有日志'); return; }
+  document.getElementById('summaryText').value = log.summary || buildDailySummary(dateKey);
+  openModal('summaryModal');
+}
+function handleAction(el){
+  const act = el.dataset.act;
+  const id = el.dataset.id ? Number(el.dataset.id) : null;
+  if(act === 'edit'){
+    const task = state.tasks.find(t=>t.id===id);
+    if(task) openTaskModal('edit', task);
+  }else if(act === 'report'){
+    openReportModal(id);
+  }else if(act === 'records'){
+    openRecordsModal(id);
+  }else if(act === 'delete'){
+    deleteTask(id);
+  }else if(act === 'quick'){
+    const task = state.tasks.find(t=>t.id===id);
+    if(!task) return;
+    state.currentTaskId = id;
+    document.getElementById('reportStep').value = 5;
+    document.getElementById('reportStepValue').textContent = 5;
+    document.getElementById('reportText').value = '快速汇报：已推进 5 格。';
+    document.getElementById('reportPhoto').value = '';
+    document.getElementById('reportPhotoPreview').src = '';
+    document.getElementById('reportPhotoPreview').classList.remove('show');
+    submitReport();
+  }else if(act === 'delete-log'){
+    deleteLog(el.dataset.date);
+  }else if(act === 'summary'){
+    showSummaryForDate(el.dataset.date);
+  }else if(act === 'delete-memo'){
+    deleteMemo(Number(el.dataset.id));
+  }
+}
+function bindEvents(){
+  document.querySelectorAll('.tab,.navbtn').forEach(btn=>{
+    btn.addEventListener('click',()=>setView(btn.dataset.view));
+  });
+
+  document.getElementById('searchInput').addEventListener('input', render);
+
+  document.getElementById('fabBtn').addEventListener('click',()=>{
+    if(state.view === 'tasks') openTaskModal('add');
+    else if(state.view === 'logs') openSummaryModal();
+    else if(state.view === 'memo') document.getElementById('memoText').focus();
+    else openTaskModal('add');
+  });
+
+  document.getElementById('importBtn').addEventListener('click', openImportModal);
+  document.getElementById('generateSummaryBtn').addEventListener('click', openSummaryModal);
+
+  document.getElementById('saveTaskBtn').addEventListener('click', addOrUpdateTask);
+  document.getElementById('doImportBtn').addEventListener('click', importTasksFromText);
+  document.getElementById('submitReportBtn').addEventListener('click', submitReport);
+  document.getElementById('saveMemoBtn').addEventListener('click', saveMemo);
+  document.getElementById('clearMemoBtn').addEventListener('click',()=>document.getElementById('memoText').value='');
+  document.getElementById('saveSummaryBtn').addEventListener('click',()=>{
+    const text = document.getElementById('summaryText').value.trim();
+    if(!text){ alert('没有可保存的小结'); return; }
+    const dateKey = getTodayKey();
+    saveLogSummary(dateKey, text);
+    const log = ensureDailyLog(dateKey);
+    log.content = buildLogContent(log);
+    save();
+    closeModal('summaryModal');
+    render();
+  });
+
+  document.getElementById('reportStep').addEventListener('input', e=>{
+    document.getElementById('reportStepValue').textContent = e.target.value;
+  });
+  document.getElementById('reportPhoto').addEventListener('change', async e=>{
+    const file = e.target.files && e.target.files[0];
+    const img = document.getElementById('reportPhotoPreview');
+    if(!file){ img.classList.remove('show'); img.src=''; return; }
+    const url = await dataUrlFromFile(file);
+    img.src = url;
+    img.classList.add('show');
+  });
+
+  document.getElementById('taskStart').addEventListener('input', ()=>{
+    const task = state.currentEditTaskId ? state.tasks.find(t=>t.id===state.currentEditTaskId) : null;
+    if(task) document.getElementById('taskPressurePreview').textContent = `${taskPressure(task)}/100`;
+  });
+
+  document.querySelectorAll('[data-close]').forEach(btn=>{
+    btn.addEventListener('click', ()=>closeModal(btn.dataset.close));
+  });
+
+  document.querySelectorAll('.modal').forEach(mod=>{
+    mod.addEventListener('click', e=>{
+      if(e.target.classList.contains('backdrop') || e.target.dataset.close){
+        closeModal(mod.id);
+      }
+    });
+  });
+
+  document.addEventListener('click', e=>{
+    const btn = e.target.closest('[data-act]');
+    if(btn) handleAction(btn);
+  });
+
+  window.addEventListener('resize', renderCharts);
+}
+function periodicUpdate(){
+  applyPagePressure();
+  renderTasks((document.getElementById('searchInput').value || '').trim().toLowerCase());
+}
+function init(){
+  load();
+  bindEvents();
+  render();
+  openSummaryIfNeeded();
+  setInterval(periodicUpdate, 60*1000);
+}
+function openSummaryIfNeeded(){
+  // 不自动打断用户，只在没有日志时给一个轻提示
+  if(!state.logs.length){
+    const dateKey = getTodayKey();
+    const log = ensureDailyLog(dateKey);
+    log.content = buildLogContent(log);
+    save();
+    render();
+  }
+}
+init();
+</script>
+</body>
+</html>
