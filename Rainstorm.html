@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>任务压力管理 V2</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+body{font-family:sans-serif;margin:0;padding:15px;transition:.5s;background:#f5f5f5;color:#222}
+.task-card{background:#fff;padding:12px;border-radius:12px;margin:10px 0;position:relative;transition:.5s;overflow:hidden}
+input,textarea,button,select{width:100%;padding:8px;margin:4px 0;box-sizing:border-box}
+.progress{height:16px;background:#ddd;border-radius:20px;overflow:hidden;margin:4px 0}
+.bar{height:100%;background:#4caf50;transition:.3s;width:0}
+.stress-layer{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;transition:.5s;z-index:2;}
+body.stress0{background:#f5f5f5}
+body.stress1{background:#fff2f2}
+body.stress2{background:#ffd6d6}
+body.stress3{background:#ffb3b3}
+body.stress4{background:#ff8c8c}
+body.stress5{background:#ff5e5e;color:#fff}
+.warn{font-weight:bold;color:#b00020;transition:.5s}
+body.stress5 .warn{color:#fff700}
+.card{background:#fff;padding:12px;border-radius:12px;margin:10px 0}
+</style>
+</head>
+<body>
+<h2>任务压力管理 V2</h2>
+
+<div id="pressureBox" class="card"></div>
+
+<div class="card">
+<h3>新增任务</h3>
+<input id="title" placeholder="任务名称">
+<label>开始时间</label>
+<input id="start" type="datetime-local">
+<label>结束时间</label>
+<input id="end" type="datetime-local">
+<button onclick="addTask()">添加任务</button>
+</div>
+
+<div id="tasks"></div>
+
+<div class="card">
+<h3>今日自动小结</h3>
+<div id="summary"></div>
+</div>
+
+<div class="card">
+<h3>完成度趋势</h3>
+<canvas id="chart"></canvas>
+</div>
+
+<div class="card">
+<h3>任务日志</h3>
+<input id="searchLog" placeholder="搜索日志" oninput="renderLogs()">
+<div id="logs"></div>
+</div>
+
+<div class="card">
+<h3>备忘录</h3>
+<input id="memoInput" placeholder="新备忘录">
+<button onclick="addMemo()">添加备忘录</button>
+<div id="memos"></div>
+</div>
+
+<script>
+let tasks=JSON.parse(localStorage.getItem("tasks")||"[]");
+let logs=JSON.parse(localStorage.getItem("logs")||"[]");
+let memos=JSON.parse(localStorage.getItem("memos")||"[]");
+
+function save(){
+ localStorage.setItem("tasks",JSON.stringify(tasks));
+ localStorage.setItem("logs",JSON.stringify(logs));
+ localStorage.setItem("memos",JSON.stringify(memos));
+}
+
+function addTask(){
+ const t={
+ id:Date.now(),
+ title:title.value,
+ start:start.value,
+ end:end.value,
+ progress:0,
+ reports:[]
+ };
+ if(!t.title)return;
+ tasks.push(t);
+ save();
+ render();
+}
+
+function reportTask(id){
+ let txt=document.getElementById("txt"+id).value;
+ let add=Number(document.getElementById("add"+id).value||0);
+ let file=document.getElementById("file"+id).files[0];
+
+ const finish=(img)=>{
+   let task=tasks.find(x=>x.id===id);
+   task.progress=Math.min(100,task.progress+add);
+   task.reports.push({
+     date:new Date().toLocaleString(),
+     text:txt,
+     image:img,
+     add:add
+   });
+
+   if(task.progress>=100){
+      logs.push({
+        date:new Date().toLocaleString(),
+        title:task.title,
+        result:"任务完成",
+        reports:task.reports
+      });
+      tasks=tasks.filter(x=>x.id!==id);
+   }
+
+   save();
+   render();
+ };
+
+ if(file){
+   let reader=new FileReader();
+   reader.onload=e=>finish(e.target.result);
+   reader.readAsDataURL(file);
+ }else finish("");
+}
+
+function editTask(id){
+ let t=tasks.find(x=>x.id===id);
+ t.start=prompt("修改开始时间",t.start)||t.start;
+ t.end=prompt("修改结束时间",t.end)||t.end;
+ save(); render();
+}
+
+function getStress(){
+ let stress=0;
+ const today=new Date();
+ tasks.forEach(t=>{
+   if(!t.start || !t.end) return;
+   let start=new Date(t.start);
+   let end=new Date(t.end);
+   if(today<start) return; // 未开始不计压力
+   let progressFactor=100-t.progress;
+   let timeFactor=Math.max(0,1-(end-today)/(end-start));
+   let taskStress=Math.min(100,progressFactor*timeFactor*0.5);
+   let todayReported=t.reports.some(r=>new Date(r.date).toDateString()===today.toDateString());
+   if(!todayReported) taskStress+=20;
+   stress+=taskStress;
+ });
+ return Math.min(100,stress);
+}
+
+function render(){
+ let stress=getStress();
+ document.body.className="stress"+Math.min(5,Math.floor(stress/20)+1);
+
+ pressureBox.innerHTML=`
+ <h3>今日压力值：${Math.round(stress)}/100</h3>
+ <div class="warn">
+ ${stress<20?"状态正常":
+ stress<40?"有任务滞后":
+ stress<60?"进度不足，需要汇报":
+ stress<80?"拖延明显，请立即处理任务":
+ "高压状态：多个任务未推进或未汇报"}
+ </div>`;
+
+ let tasksDiv="";
+ tasks.forEach(t=>{
+ tasksDiv+=`
+ <div class="task-card">
+ <h3>${t.title}</h3>
+ <div>开始：${t.start||"-"}</div>
+ <div>结束：${t.end||"-"}</div>
+ <div class="progress"><div class="bar" style="width:${t.progress}%"></div></div>
+ <div>${t.progress}/100</div>
+
+ <input id="add${t.id}" type="number" placeholder="本次增加格数">
+ <textarea id="txt${t.id}" placeholder="成果汇报"></textarea>
+ <input id="file${t.id}" type="file" accept="image/*">
+ <button onclick="reportTask(${t.id})">提交汇报</button>
+ <button onclick="editTask(${t.id})">修改时间</button>
+ </div>`;
+ });
+ document.getElementById("tasks").innerHTML=tasksDiv;
+
+ let completed=logs.filter(x=>x.result==="任务完成").length;
+ summary.innerHTML=`日期：${new Date().toLocaleDateString()}<br>
+ 当前任务数：${tasks.length}<br>
+ 已完成任务：${completed}<br>
+ 今日压力值：${Math.round(stress)}`;
+
+ renderLogs();
+ drawChart();
+ renderMemos();
+}
+
+function renderLogs(){
+ let kw=document.getElementById("searchLog").value.toLowerCase();
+ document.getElementById("logs").innerHTML=logs.filter(l=>l.title.toLowerCase().includes(kw)||l.reports.some(r=>r.text.toLowerCase().includes(kw))).map(
+ l=>`<div>
+ <strong>${l.date} - ${l.title} - ${l.result}</strong>
+ ${l.reports.map(r=>`<div>${r.date}: ${r.text}${r.image?'<br><img src="'+r.image+'" width="100">':''}</div>`).join('')}
+ </div>`
+ ).join("");
+}
+
+function drawChart(){
+ let ctx=document.getElementById("chart");
+ let data=tasks.map(t=>t.progress);
+ let labels=tasks.map(t=>t.title);
+ if(window.myChart)window.myChart.destroy();
+ window.myChart=new Chart(ctx,{
+ type:'bar',
+ data:{labels:labels,datasets:[{data:data,label:"完成度",backgroundColor:"#4caf50"}]},
+ options:{responsive:true,scales:{y:{beginAtZero:true,max:100}}}
+ });
+}
+
+function addMemo(){
+ let txt=document.getElementById("memoInput").value;
+ if(!txt) return;
+ memos.push({id:Date.now(),text:txt,date:new Date().toLocaleString()});
+ document.getElementById("memoInput").value="";
+ save();
+ renderMemos();
+}
+
+function renderMemos(){
+ document.getElementById("memos").innerHTML=memos.map(m=>`<div>${m.date}: ${m.text}</div>`).join("");
+}
+
+render();
+</script>
+</body>
+</html>
